@@ -42,6 +42,7 @@ let lastTime = 0;
    {
      arena.push(new Array(w).fill(0));
    }
+   arena.push(new Array(w).fill(-1));
    return arena;
  }
 
@@ -56,7 +57,7 @@ let lastTime = 0;
       {
         if(value !== 0)
         {
-          grid[y + player.pos.y][x + player.pos.y] = value;
+          grid[y + player.pos.y][x + player.pos.x] = value;
         }
       });
    })
@@ -68,22 +69,18 @@ let lastTime = 0;
 
 function collide(grid, player)
 {
-  const [m, o] = [player.matrix, player.pos];
+  const m = player.matrix;
+  const o = player.pos;
   for(let y = 0; y < m.length; ++y)
   {
-    for(let x = 0; x < m[y].length; ++x)
+    for(let x = 0;x < m[y].length; ++x)
     {
-//Contro se il Tetramino da esaminare collide con la Griglia
-//o contro un'altro Tetramino
-      if(m[y][x] !== 0 &&
-        (grid[y + o.y] && grid[y + o.y][x + o.x] !== 0))
-        {
-          return true;
-        }
-        console.log(grid[y + o.y])
+      if(m[y][x] !== 0 && (grid[y + o.y] && grid[y + o.y][x + o.x] !== 0))
+      {
+        return true;
+      }
     }
   }
-
   return false;
 }
 
