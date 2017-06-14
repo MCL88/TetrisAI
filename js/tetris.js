@@ -16,7 +16,6 @@ const matrix =
   [0,1,1],
   [1,1,0],
   [0,0,0]
-
 ]
 
 let grid;
@@ -67,15 +66,18 @@ let lastTime = 0;
  //Funzione che verifica una collisione tra Tetramini
 //e tra Tetramino e la Griglia
 
+//Funzione del disagio
+
 function collide(grid, player)
 {
   const m = player.matrix;
   const o = player.pos;
+  console.log(m);
   for(let y = 0; y < m.length; ++y)
   {
     for(let x = 0;x < m[y].length; ++x)
     {
-      if(m[y][x] !== 0 && (grid[y + o.y] && grid[y + o.y][x + o.x] !== 0))
+      if(m[y][x] !== 0 && (grid[y + o.y] && grid[y + o.y][x + o.x]) !== 0)
       {
         return true;
       }
@@ -119,20 +121,21 @@ function drop(keyDown = false)
     dropCounter = 0;
 }
 
-//Sposta il Tetramino a sx
-function moveLeft()
+function move(dir)
 {
-  player.pos.x--;
-}
-//Sposta il Tetramino a dx
-function moveRight()
-{
-   player.pos.x++;
+  player.pos.x += dir;
+  if(collide(grid, player.matrix))
+  {
+    console.log("Cuai")
+    player.pos.x -= dir;
+  }
 }
 
 function reset()
 {
   player.pos.y = 0;
+  createGrid(12, 20);
+  drawMatrix(grid ,{x:0, y:0});
 }
 
 
@@ -158,6 +161,7 @@ function draw()
   context.fillStyle = "#000";
   context.fillRect(0,0, canvas.width, canvas.height);
   drawMatrix(player.matrix, player.pos);
+  drawMatrix(grid ,{x:0, y:0})
 }
 
 
@@ -167,11 +171,11 @@ document.addEventListener("keydown", event =>
 {
   if(event.keyCode === 65)
   {
-    moveLeft();
+    move(-1);
   }
   else if(event.keyCode === 68)
   {
-    moveRight();
+    move(1);
   }
   if(event.keyCode === 83)
   {
