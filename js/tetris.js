@@ -11,12 +11,6 @@ context.scale(20,20);
 
 //Dati di inizializzazione
 
-const matrix =
-[
-  [0,1,1],
-  [1,1,0],
-  [0,0,0]
-]
 
 let grid;
 
@@ -41,9 +35,80 @@ let lastTime = 0;
    {
      arena.push(new Array(w).fill(0));
    }
-   arena.push(new Array(w).fill(-1));
    return arena;
  }
+
+ //Funzione che crea i Tetramini
+ function createPiece(type)
+ {
+  if(type === "S")
+  {
+    return [
+             [0,1,1],
+             [1,1,0],
+             [0,0,0]
+           ]
+  }
+  if(type === "T")
+  {
+    return [
+             [2,2,2],
+             [0,2,0],
+             [0,0,0]
+           ]
+  }
+  if(type === "Z")
+  {
+    return [
+             [3,3,0],
+             [0,3,3],
+             [0,0,0]
+           ]
+  }
+  if(type === "L")
+  {
+    return [
+             [4,0,0],
+             [4,0,0],
+             [4,4,0]
+           ]
+  }
+  if(type === "J")
+  {
+    return [
+             [0,5,0],
+             [0,5,0],
+             [5,5,0]
+           ]
+  }
+  if(type === "O")
+  {
+    return [
+             [6,6],
+             [6,6]
+           ]
+  }
+  if(type === "I")
+  {
+    return [
+             [0,7,0,0],
+             [0,7,0,0],
+             [0,7,0,0],
+             [0,7,0,0]
+           ]
+  }
+ }
+
+ const colors =
+ [
+   'null',
+   'red',
+   'blue',
+   'orange',
+   'green',
+   'yellow',
+   'lightblue'
+ ]
 
  //funzione che inserisce i Tetramini all'interno
  //della Griglia
@@ -72,7 +137,6 @@ function collide(grid, player)
 {
   const m = player.matrix;
   const o = player.pos;
-  console.log(m);
   for(let y = 0; y < m.length; ++y)
   {
     for(let x = 0;x < m[y].length; ++x)
@@ -86,7 +150,7 @@ function collide(grid, player)
   return false;
 }
 
-//Funzioni di aggiornamento dati Tetris
+//Funzioni di aggiornamento dati Tertis
 
 
 function update(time = 0)
@@ -124,18 +188,74 @@ function drop(keyDown = false)
 function move(dir)
 {
   player.pos.x += dir;
-  if(collide(grid, player.matrix))
+  if(collide(grid, player))
   {
-    console.log("Cuai")
     player.pos.x -= dir;
+  }
+}
+
+//Funzione che si occupa della rotazionje
+function rotate(matrix, dir)
+{
+//Traposta della matrice
+  for(let y = 0; y < matrix.length; ++y)
+  {
+    for(let x = 0; x < y; ++x)
+    {
+        [
+          matrix[x][y],
+          matrix[y][x]
+        ] = 
+        [
+          matrix[y][x],
+          matrix[x][y]
+        ] 
+    }
+  }
+  if(dir > 0)
+  {
+    matrix.forEach(row => row.reverse());
+  }
+  else
+  {
+    matrix.reverse()
+  }
+}
+
+function playerRotate(dir)
+{
+  const pos = player.pos.x;
+  let offset = 1;
+  rotate(player.matrix, dir);
+  while(collide(grid, player))
+  {
+    player.pos.x += offset;
+    offset = -(offset + (offset > 0 ? 1 : -1));
+    if(offset > player.matrix[0].length)
+    {
+      rotate(player.matrix, -dir);
+      player.pos.x = pos;
+      return;
+    }
+  }
+}
+
+//Creo i Tetramini
+function playerReset()
+{
+  const pieces = "ILJOTSZ";
+  player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+  player.pos.y = 0;
+  player.pos.x = (grid[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+  if(collide(grid, player))
+  {
+    grid.forEach(row => row.fill(0));
   }
 }
 
 function reset()
 {
-  player.pos.y = 0;
-  createGrid(12, 20);
-  drawMatrix(grid ,{x:0, y:0});
+  playerReset();
 }
 
 
@@ -149,7 +269,7 @@ function drawMatrix(matrix, offset)
     {
       if(value !== 0)
       {
-        context.fillStyle = "#F00";
+        context.fillStyle = colors[value];
         context.fillRect(x + offset.x, y + offset.y, 1, 1);
       }
     });
@@ -177,6 +297,10 @@ document.addEventListener("keydown", event =>
   {
     move(1);
   }
+  if(event.keyCode === 87)
+  {
+    playerRotate(-1);
+  }
   if(event.keyCode === 83)
   {
 //Qui il drop viene causato dal player per questo
@@ -197,12 +321,13 @@ grid = createGrid(12, 20);
 
 const player =
 {
-  pos:{x:0, y:0},
-  matrix: matrix
+  pos:{x:5, y:0},
+  matrix: []
 }
 
 console.log(grid);
 console.table(grid);
 
 //Loop gioco
+playerReset();
 update();
