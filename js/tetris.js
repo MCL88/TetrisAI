@@ -101,13 +101,14 @@ let lastTime = 0;
 
  const colors =
  [
-   'null',
+   null,
    'red',
    'blue',
    'orange',
    'green',
    'yellow',
-   'lightblue'
+   'lightblue',
+   'darkblue'
  ]
 
  //funzione che inserisce i Tetramini all'interno
@@ -169,11 +170,39 @@ function update(time = 0)
   requestAnimationFrame(update);
 }
 
-//Azioni
+function updateScore()
+{
+  document.getElementById("score").innerText = "Punteggio: " + player.score;
+}
 
+function gridSweep()
+{
+  let rowCount = 1;
+  outer: for(let y = grid.length - 1; y > 0; --y)
+  {
+    for(let x = 0;x < grid[y].length; ++x)
+    {
+//Se è presente una buco nella riga y
+      if(grid[y][x] == 0)
+        continue outer;
+    }
+      const row = grid.splice(y,1)[0].fill(0);
+      grid.unshift(row);
+      ++y;
+
+      player.score += rowCount * 10;
+      rowCount *= 2;
+  }
+
+
+
+
+}
+
+//Azioni
 //Il drop del Tetramino viene richiamato da più funzioni meglio creare una funzione
 //gestisce questa feature
-function drop(keyDown = false)
+function drop()
 {
     player.pos.y++;
     if(collide(grid, player))
@@ -181,6 +210,8 @@ function drop(keyDown = false)
       player.pos.y--;
       merge(grid, player);
       reset();
+      gridSweep();
+      updateScore();
     }
     dropCounter = 0;
 }
@@ -250,6 +281,7 @@ function playerReset()
   if(collide(grid, player))
   {
     grid.forEach(row => row.fill(0));
+    player.score = 0;
   }
 }
 
@@ -269,13 +301,17 @@ function drawMatrix(matrix, offset)
     {
       if(value !== 0)
       {
+        context.strokeStyle = "gray";
+        context.lineWidth = "0.5px";
         context.fillStyle = colors[value];
         context.fillRect(x + offset.x, y + offset.y, 1, 1);
+        context.stroke();
       }
     });
   });
 };
 
+//Funzione che si occupa nel disegno dei Tetramini
 function draw()
 {
   context.fillStyle = "#000";
@@ -285,7 +321,7 @@ function draw()
 }
 
 
-//Funzioni gestione tastiea
+//Funzioni gestione tastiera
 
 document.addEventListener("keydown", event =>
 {
@@ -306,7 +342,9 @@ document.addEventListener("keydown", event =>
 //Qui il drop viene causato dal player per questo
 //viene messo a true l'argomento di player drop
 //che di default è settato false
-    drop(true);
+    drop();
+    player.score += 1;
+    updateScore();
   }
   if(event.keyCode === 82)
   {
@@ -322,7 +360,8 @@ grid = createGrid(12, 20);
 const player =
 {
   pos:{x:5, y:0},
-  matrix: []
+  matrix: [],
+  score: 0
 }
 
 console.log(grid);
