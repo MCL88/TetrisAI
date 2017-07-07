@@ -1,12 +1,15 @@
 //Prendo il gioco
 const canvas = document.getElementById("tetris");
+const next = document.getElementById("next");
 //Il focus viene settato sulla griglia di gioco
 canvas.focus();
 //Setto il gioco in 2D
 var context = canvas.getContext("2d");
+var nextctx = next.getContext("2d");
 
 
 context.scale(20,20);
+nextctx.scale(20,20);
 
 
 //Dati di inizializzazione
@@ -25,6 +28,32 @@ let lastTime = 0;
  let dropCounter = 0;
  //Tempo che passa tra un drop e l'altro
  let dropTimer = 1000;
+
+
+
+//Dati AI
+let currentShape;
+let nextShape;
+let bag = [];
+let bagIndex = 0;
+//Attivo l'AI del gioco
+let ai = 0;
+//aggiornamento grafici vs AI Genetics
+let mutex;
+//Cambio velocità
+let changeSpeed = false;
+
+//Stati del gioco
+//Salva lo stato attuale del gioco. Viene ricaricato successivamente
+let saveState
+//contiene lo stato attuale del gioco
+let currentState;
+
+//Opzioni Gioco
+let speed = [.500, .200, .2, .1];
+let speedIndex = 0;
+//velocità del gioco
+let fpsInterval = 1000/speed[speedIndex];
 
  //Creazione Griglia di gioco di tetris
 
@@ -156,12 +185,12 @@ function collide(grid, player)
 
 function update(time = 0)
 {
-  const deltaTime = time - lastTime;
+  const deltaTime = (time - lastTime);
   lastTime = time;
   // console.log(lastTime);
   // console.log(dropCounter);
 //Il dropCounter aumenta in base a deltaTime
-  dropCounter += deltaTime;
+  dropCounter += (deltaTime % fpsInterval);
   if(dropCounter > dropTimer)
   {
       drop();
@@ -236,11 +265,11 @@ function rotate(matrix, dir)
         [
           matrix[x][y],
           matrix[y][x]
-        ] = 
+        ] =
         [
           matrix[y][x],
           matrix[x][y]
-        ] 
+        ]
     }
   }
   if(dir > 0)
@@ -275,7 +304,9 @@ function playerRotate(dir)
 function playerReset()
 {
   const pieces = "ILJOTSZ";
-  player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
+  currentShape = currentShape ? nextShape : createPiece(pieces[pieces.length * Math.random() | 0]);
+  nextShape = createPiece(pieces[pieces.length * Math.random() | 0]);
+  player.matrix = currentShape;
   player.pos.y = 0;
   player.pos.x = (grid[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
   if(collide(grid, player))
@@ -293,19 +324,30 @@ function reset()
 
 
 //funzione grafica Tetris
-function drawMatrix(matrix, offset)
+function drawMatrix(matrix, offset, next = false)
 {
   matrix.forEach((row,y) =>
   {
     row.forEach((value,x) =>
     {
-      if(value !== 0)
+      if(!next)
       {
-        context.strokeStyle = "gray";
-        context.lineWidth = "0.5px";
-        context.fillStyle = colors[value];
-        context.fillRect(x + offset.x, y + offset.y, 1, 1);
-        context.stroke();
+        if(value !== 0)
+        {
+          context.strokeStyle = "gray";
+          context.lineWidth = "0.5px";
+          context.fillStyle = colors[value];
+          context.fillRect(x + offset.x, y + offset.y, 1, 1);
+          context.stroke();
+        }
+      }
+      else
+      {
+        nextctx.strokeStyle = "gray";
+        nextctx.lineWidth = "0.5px";
+        nextctx.fillStyle = colors[value];
+        nextctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+        nextctx.stroke();
       }
     });
   });
@@ -315,8 +357,11 @@ function drawMatrix(matrix, offset)
 function draw()
 {
   context.fillStyle = "#000";
+  nextctx.fillStyle = "grey";
   context.fillRect(0,0, canvas.width, canvas.height);
+  nextctx.fillRect(0,0, nextctx.width, nextctx.height);
   drawMatrix(player.matrix, player.pos);
+  drawMatrix(nextShape,{x:2, y:2}, true);
   drawMatrix(grid ,{x:0, y:0})
 }
 
@@ -350,6 +395,11 @@ document.addEventListener("keydown", event =>
   {
     reset();
   }
+  if(event.keyCode === 32)
+  {
+    speedIndex = (speedIndex + 1)%4;
+    fpsInterval = 1000/speed[speedIndex];
+  }
 });
 
 
@@ -360,7 +410,7 @@ grid = createGrid(12, 20);
 const player =
 {
   pos:{x:5, y:0},
-  matrix: [],
+  matrix: currentShape,
   score: 0
 }
 
