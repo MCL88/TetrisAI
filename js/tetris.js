@@ -37,11 +37,16 @@ let nextShape;
 let bag = [];
 let bagIndex = 0;
 //Attivo l'AI del gioco
-let ai = 0;
+let ai = false;
 //aggiornamento grafici vs AI Genetics
-let mutex;
+let draw;
 //Cambio velocità
 let changeSpeed = false;
+let moves = 0;
+let moveLimit = 500;
+let generation = 0;
+let moveAlgorithm = [];
+let inspectMoveSelection = false;
 
 //Stati del gioco
 //Salva lo stato attuale del gioco. Viene ricaricato successivamente
@@ -50,10 +55,183 @@ let saveState
 let currentState;
 
 //Opzioni Gioco
-let speed = [.500, .200, .2, .1];
+let speed = [500, 200, 2, 0];
 let speedIndex = 0;
 //velocità del gioco
 let fpsInterval = 1000/speed[speedIndex];
+
+//Dati algoritmo genetico
+let populationSize = 50;
+let genomes = [];
+let currentGenome = -1;
+let generation = 0;
+let archive =
+{
+  populationSize: 0,
+  currentGeneration: 0,
+  elites: [],
+  genomes: []
+
+}
+//possibilità di mutazione del genoma
+let mutationRate = 0.025;
+//Velore utilizzato per modificare il genoma
+let mutationStep = 0.2;
+
+
+//Funzioni AI
+function initialize()
+{
+  archive.populationSize = populationSize;
+  nextShape();
+  applyShape();
+  saveState = getState();
+  currentState = getState();
+
+  createInitialPopulation();
+
+  let loop = function()
+  {
+    if(changeSpeed)
+    {
+      clearInterval(interval);
+      interval = setInterval(loop, speed);
+      changeSpeed = false;
+    }
+//Se il gioco è fermo, non vengono aggiornati gli elementi su schermo
+    if(speed == 0)
+    {
+      draw = false;
+      update();
+      update();
+      update();
+    }
+    else
+    {
+      draw = true;
+    }
+    update();
+    if(speed === 0)
+    {
+      draw = true;
+      updateScore();
+    }
+  };
+  var interval = setInterval(loop, speed);
+}
+
+function createInitialPopulation()
+{
+  let genomes = [];
+
+  for(let i = 0; i < populationSize; i++)
+  {
+    genome =
+    {
+      //identificativo per distingure il genoma
+          id: Math.random(),
+      //Il peso di ogni riga eliminata dalla mossa data.
+      // Alto è il peso, più righe vengono ripulite dalla mossa
+          rowsCleared: Math.random() - 0.5,
+      //L'altezza assoluta della più grande pila di blocchi come potenza di 1.5
+          weightedHeight: Math.random() - 0.5,
+      //La somma di tutte le altezze delle pile di blocchi presenti
+          cumulativeHeight: Math.random() - 0.5,
+      //L'altezza della pila più alta meno quella più piccola
+          relativeHeight: Math.random() - 0.5,
+      //La somma di tutte le celle vuote presenti nella grigia di gioco
+          holes:  Math.random() * 0.5,
+      //La somma delle differenze tra la pile più alta e quelle più piccole di quest'ultima
+      //(esempio, se le pile sono piatte il valore di roughness è pari a 0)
+          roughness: Math.random() - 0.5
+
+    }
+    genomes.push(genome);
+  }
+  evalutateNextGeneration();
+}
+
+//Valuta il prossimo genoma della popolazione.
+//Se non ci sono più genomi da esaminare, si passa all'evoluzione della popolazione
+
+function evalutateNextGeneration()
+{
+  currentGenome++;
+  if(currentGenome === genomes.length)
+  {
+    evolve();
+  }
+  //carica lo stato corrente del gioco
+  loadState(currentState);
+  //resetta il numero di mosse eseguite
+  move = 0;
+  //esegue una nuova mossa
+  makeNextMove();
+}
+
+//Evolve un'intera popolazione per passare alla prossima generazione
+
+function evolve()
+{
+  console.log("Generazione " + generation + " controllata");
+  currentGenome = 0;
+  generation++;
+//Resetta il gioco
+  reset();
+//ottengo lo stato di gioco corrente
+roundstate = getState();
+//ordino i genomi in base al loro valore di fitness
+genomes.sort(function(a, b)
+{
+  return b.fitness - a.fitness;
+});
+
+//Aggoiungi una copia dei genomi con il più alto valore di fitness
+archive.elites.push(genomes[0]);
+console.log("Miglior prestazione: " + genomes[0].fitness);
+//Vengono eliminati con il più basso valore di fitness
+while(genomes.length > populationSize/2)
+{
+  genomes.pop();
+}
+//somma totale delle fitness dei genoma
+let totalFitness;
+for(let i = 0; i < genomes.length; i++)
+{
+  totalFitness += genomes[i].fitness;
+}
+
+//creo una funzione innestata che sceglie a random un genoma
+
+function getRandomGenome()
+{
+  return genomes[randomWeightedNumBetween(0, genomes.length - 1)];
+}
+
+//creo un array figli
+let children = [];
+//metto in cima a children il genoma con il più grande punteggio di fitness
+children.push(genome[0]);
+while(children.length < populationSize)
+{
+  //crossover tra 2 genomi presi a random
+  children.push(makeChild(getRandomeGenome(), getRandomGenome()));
+}
+
+genomes = [];
+genomes = genomes.concat(children);
+//memorizzo i geni nell'archivio
+archive.genomes = clone(genomes);
+//setto la generazione corrente su archive
+archive.currentGeneration = clone(generation);
+console.log(JSON.stringify(archive));
+//memorizzo in memoria temporanea archive
+localStorage.setItem("archive",JSON.stringify(archive))
+}
+
+//Creo un figlio da 2 genoma genitori
+
+//Makechild now
 
  //Creazione Griglia di gioco di tetris
 
@@ -161,7 +339,6 @@ let fpsInterval = 1000/speed[speedIndex];
  //Funzione che verifica una collisione tra Tetramini
 //e tra Tetramino e la Griglia
 
-//Funzione del disagio
 
 function collide(grid, player)
 {
@@ -418,5 +595,4 @@ console.log(grid);
 console.table(grid);
 
 //Loop gioco
-playerReset();
-update();
+window.onload = initialize();
